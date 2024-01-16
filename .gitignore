@@ -1,0 +1,10 @@
+venv
+KZSP
+.idea
+
+# debug files/folder
+video-py
+
+main__.py
+main_new_old.py
+main_old.py
