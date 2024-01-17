@@ -1,10 +1,15 @@
+import datetime
 import time
+import imageio
 from typing import List
 
 import cv2
 import numpy as np
 
 data_folder = "./KZSP/data/"
+max_canvas_width = 400
+max_canvas_height = 300
+
 
 
 def resize_frame(frame: np.ndarray) -> np.ndarray:
@@ -19,8 +24,6 @@ def resize_frame(frame: np.ndarray) -> np.ndarray:
     """
     height, width, _ = frame.shape
 
-    max_canvas_width = 400
-    max_canvas_height = 300
     width_ratio = max_canvas_width / width
     height_ratio = max_canvas_height / height
     scale_ratio = min(width_ratio, height_ratio)
@@ -58,76 +61,91 @@ def get_frame_with_min_timestamp(annotation_list: List[float], current_timestamp
     cut_l_difference = [abs(current_timestamp - t) for t in annotation_list]
     return annotation_list.index(annotation_list[cut_l_difference.index(min(cut_l_difference))])
 
+    # return min(range(len(annotation_list)), key=lambda i: abs(annotation_list[i] - current_timestamp))
 
-def play_multiple_videos(v_paths: List[str], a_paths: List[str]) -> None:
+
+
+def get_sync_video(output_path: str) -> dict:
     """
     Основная функция воспроизведения
 
     Args:
-        v_paths (List[str]): Пути до видеофайлов.
-        a_paths (List[str]): Пути до аннотационных файлов.
+        output_path (str): Пути для сохранения видео.
     """
+    try:
 
-    # Создаем объекты VideoCapture для каждого видео
-    cap1 = cv2.VideoCapture(v_paths[0])
-    cap2 = cv2.VideoCapture(v_paths[1])
-    cap3 = cv2.VideoCapture(v_paths[2])
-    cap4 = cv2.VideoCapture(v_paths[3])
+        video_paths = [data_folder + f"{i}.avi" for i in range(1, 5)]
+        annotation_paths = [data_folder + f"{i}.txt" for i in range(1, 5)]
+        
+        # Создаем объекты VideoCapture для каждого видео
+        cap1 = cv2.VideoCapture(video_paths[0])
+        cap2 = cv2.VideoCapture(video_paths[1])
+        cap3 = cv2.VideoCapture(video_paths[2])
+        cap4 = cv2.VideoCapture(video_paths[3])
 
-    # Читаем аннотации
-    list_annotations = [read_annotations(annotation) for annotation in a_paths]
+        # Читаем аннотации
+        list_annotations = [read_annotations(annotation) for annotation in annotation_paths]
 
-    # Выясняем время, от которого будем отталкиваться
-    current_time = min(list_annotations[i][0] for i in range(4))
+        # Выясняем время, от которого будем отталкиваться
+        current_time = min(list_annotations[i][0] for i in range(4))
 
-    while True:
-        frame_indexes = [get_frame_with_min_timestamp(list_annotations[i], current_time) for i in range(4)]
-
-        if max(frame_indexes) >= min(len(i) - 1 for i in list_annotations):
-            break
-
-        # Устанавливаем текущий кадр для каждого видео
-        for cap, frame_index in zip([cap1, cap2, cap3, cap4], frame_indexes):
-            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
-
-        # Чтение кадров из каждого видео
-        ret1, frame1 = cap1.read()
-        ret2, frame2 = cap2.read()
-        ret3, frame3 = cap3.read()
-        ret4, frame4 = cap4.read()
-
-        frame1, frame2, frame3, frame4 = (resize_frame(frame) for frame in [frame1, frame2, frame3, frame4])
-
-        # Проверка на конец видео
-        if not ret1 or not ret2 or not ret3 or not ret4:
-            break
-
-        # Объединение кадров
-        top_row = cv2.hconcat([frame4, frame1])
-        bottom_row = cv2.hconcat([frame2, frame3])
-        full_frame = cv2.vconcat([top_row, bottom_row])
-
-        # Создание окна
-        cv2.imshow('Four Videos', full_frame)
-
-        current_time += 0.200
-
-        # Прерывание воспроизведения на 'q'
-        if cv2.waitKey(25) & 0xFF == ord('q'):
-            break
-
-    # Освобождение ресурсов
-    cap1.release()
-    cap2.release()
-    cap3.release()
-    cap4.release()
-
-    cv2.destroyAllWindows()
+        fps = 5
+        out = imageio.get_writer(output_path, fps=fps)
 
 
-if __name__ == "__main__":
-    video_paths = [data_folder + f"{i}.avi" for i in range(1, 5)]
-    annotation_paths = [data_folder + f"{i}.txt" for i in range(1, 5)]
+        while True:
 
-    # Воспроизведение
-    play_multiple_videos(video_paths, annotation_paths)
+            frame_indexes = [get_frame_with_min_timestamp(list_annotations[i], current_time) for i in range(4)]
+
+            if max(frame_indexes) >= min(len(i) - 1 for i in list_annotations):
+                break
+
+            # Устанавливаем текущий кадр для каждого видео
+            for cap, frame_index in zip([cap1, cap2, cap3, cap4], frame_indexes):
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+
+            # Чтение кадров из каждого видео
+            ret1, frame1 = cap1.read()
+            ret2, frame2 = cap2.read()
+            ret3, frame3 = cap3.read()
+            ret4, frame4 = cap4.read()
+
+            frame1, frame2, frame3, frame4 = (resize_frame(frame) for frame in [frame1, frame2, frame3, frame4])
+
+            # Проверка на конец видео
+            if not ret1 or not ret2 or not ret3 or not ret4:
+                break
+
+            # Объединение кадров
+            top_row = cv2.hconcat([frame4, frame1])
+            bottom_row = cv2.hconcat([frame3, frame2])
+            full_frame = cv2.vconcat([top_row, bottom_row])
+
+
+            out.append_data(full_frame)
+
+
+            # Создание окна
+            # cv2.imshow('Four Videos', full_frame)
+
+            current_time += 0.200
+
+            # Прерывание воспроизведения на 'q'
+            if cv2.waitKey(25) & 0xFF == ord('q'):
+                break
+
+
+        out.close()
+
+        # Освобождение ресурсов
+        cap1.release()
+        cap2.release()
+        cap3.release()
+        cap4.release()
+
+        cv2.destroyAllWindows()
+
+        return {"success": True}
+
+    except Exception as e:
+        return {"success": False, "message": e}

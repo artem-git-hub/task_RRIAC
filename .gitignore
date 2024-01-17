@@ -1,6 +1,7 @@
 venv
-KZSP
 .idea
+*__pycache__/
+
 
 # debug files/folder
 video-py
@@ -8,3 +9,14 @@ video-py
 main__.py
 main_new_old.py
 main_old.py
+
+KZSP/Тестовое_задание_синхронизация_видео.docx
+KZSP/data/1.avi
+KZSP/data/2.avi
+KZSP/data/3.avi
+KZSP/data/4.avi
+KZSP/data/1.txt
+KZSP/data/2.txt
+KZSP/data/3.txt
+KZSP/data/4.txt
+tmp/video.avi
